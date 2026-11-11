@@ -35,7 +35,8 @@ document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=
 const suggested=[{name:'최하윤',meta:'10기 · AI · 교육',c:'#5485F5',likesMe:true},{name:'정도현',meta:'8기 · 커머스',c:'#F47B68'},{name:'한지우',meta:'9기 · 헬스케어 · AI',c:'#A17AEA',likesMe:true},{name:'오세린',meta:'7기 · 기후테크',c:'#34C759'},{name:'강민석',meta:'10기 · 핀테크 · 커머스',c:'#F5A524',likesMe:true},{name:'윤서아',meta:'8기 · 교육 · 콘텐츠',c:'#FF6B9A'}];
 const escH=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const kk=p=>p.key||p.name;const safeColor=c=>/^#[0-9a-fA-F]{6}$/.test(c||'')?c:null;
 const mascot=c=>'<svg viewBox="0 0 240 240"><path fill="'+c+'" d="M204 69C190 24 132 12 88 29C42 45 20 86 24 133C27 180 63 215 112 217C156 220 197 199 209 163C214 147 204 140 189 142C169 145 159 139 160 126C161 112 177 108 192 105C209 102 213 89 204 69Z"/><g fill="#fffdf8"><rect x="83" y="99" width="18" height="35" rx="9"/><rect x="119" y="99" width="18" height="35" rx="9"/></g></svg>';
-const CONNECT_ENABLED=false,TUTORIAL_ENABLED=true;document.documentElement.classList.toggle('connect-off',!CONNECT_ENABLED);
+const CONNECT_ENABLED=false,TUTORIAL_ENABLED=true,EVENT_OPEN=false; // EVENT_OPEN=false: 시작하기를 누르면 '종료된 행사' 안내만 떠요. true로 바꾸면 참여 코드부터 다시 진행돼요
+document.documentElement.classList.toggle('connect-off',!CONNECT_ENABLED);
 const requested=new Set(),matched=new Set(),TICKETS=5,left=()=>window.__tickets!=null?window.__tickets:TICKETS-requested.size-matched.size;let lastLeft=TICKETS;const TKI='<svg class="tk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 0 0 5V17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.5a2.5 2.5 0 0 0 0-5V7a1 1 0 0 1 1-1z"/><path d="M14.5 8v8" stroke-dasharray="0.1 2.1"/></svg>';
 function tip(m,ms=2200){document.querySelector('.notice-toast')?.remove();const t=document.createElement('div');t.className='notice-toast';t.setAttribute('role','status');t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),ms)}
 function updTickets(){const n=left();el('ticket-left').textContent=n;el('ticket-pill').setAttribute('aria-label','남은 연결 티켓 '+n+'장');el('ticket-pill').classList.toggle('empty',n===0);if(n!==lastLeft&&!matchMedia('(prefers-reduced-motion: reduce)').matches)el('ticket-pill').animate([{transform:'scale(1)'},{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:320,easing:'cubic-bezier(.34,1.56,.64,1)'});lastLeft=n}
@@ -433,7 +434,7 @@ el('rt-home').onclick=el('rt-back').onclick;
 el('event-rotation').onclick=()=>{if(S.finished){open();return}
  const resume=S.history.length||S.current;
  const {box,close}=window.__sheet('로테이션 네트워킹','<p class="sheet-sub ev-sub2">라운드마다 만난 사람을 기록하며 이어가요.</p><ol class="ev-steps"><li><b>1</b><span>지금 대화하는 사람을 검색해서 선택해요</span></li><li><b>2</b><span>대화가 끝나면 <em>다음</em>을 눌러 별점을 남겨요</span></li><li><b>3</b><span>다음 사람을 검색하고, 끝나면 마치고 랭킹을 봐요</span></li></ol><button type="button" class="primary sh-save">'+(resume?'이어서 하기':'시작하기')+'</button>');
- const go=box.querySelector('.sh-save');go.disabled=false;go.onclick=()=>{close();if(resume||askCode.ok())begin(resume);else setTimeout(()=>askCode.ask(()=>begin(resume)),230)}};
+ const go=box.querySelector('.sh-save');go.disabled=false;go.onclick=()=>{close();if(!EVENT_OPEN){tip('종료된 행사입니다');return}if(resume||askCode.ok())begin(resume);else setTimeout(()=>askCode.ask(()=>begin(resume)),230)}};
 // 시연용 참여 코드: 처음 참여할 때 4자리 코드를 입력해야 안내 시트로 넘어가요
 const askCode={};
 {const CODE='7777';
