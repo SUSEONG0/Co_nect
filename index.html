@@ -599,11 +599,12 @@ function init(){D=load();D.stats=D.stats||{streak:0,last:'',best:0,total:0};cons
  const q=make(t);P=q.puz;SOL=q.sol;return D}
 function resetAttempt(){D.day={date:today(),vals:Array(N*N).fill(0),notes:Array(N*N).fill(0),hearts:HEARTS,elapsed:0,status:'playing'};sel=-1;noteMode=false;bad=-1;store(D)}
 const live=()=>!!(window.__sb&&window.__getUser&&window.__getUser());
-let SV=null,SVuid='';
+let SV=null,SVuid='',SVday='';
 // 서버의 내 통계(연속 일수·최고 기록·완료 횟수·오늘 기록)를 가져와요
-async function fetchStats(){if(!live())return null;try{const {data,error}=await window.__sb.rpc('game_my_stats');if(error)throw error;SV=data;SVuid=uid();return data}catch(e){return null}}
-const sv=()=>SV&&SVuid===uid()?SV:null;
+async function fetchStats(){if(!live())return null;try{const {data,error}=await window.__sb.rpc('game_my_stats');if(error)throw error;SV=data;SVuid=uid();SVday=today();return data}catch(e){return null}}
+const sv=()=>SV&&SVuid===uid()&&SVday===today()?SV:null;
 // 다른 기기에서 이미 오늘 풀었다면 이 기기에서도 '완료'로 맞춰요
+function reconcile(){const v=sv();if(DAILY_LIMIT&&v&&v.today_seconds==null&&D.day.date===today()&&D.day.status==='won'){resetAttempt()}}
 function syncFromServer(){const v=sv();if(v&&v.today_seconds!=null&&D.day.status!=='won'){D.day.status='won';D.day.elapsed=v.today_seconds*1000;store(D)}}
 function statsView(){const v=sv();return v?{streak:v.streak,total:v.total,best:(v.best||0)*1000}:{streak:D.stats.last===today()||D.stats.last===yesterday()?D.stats.streak:0,total:D.stats.total,best:D.stats.best}}
 const streakNow=()=>statsView().streak;
@@ -625,10 +626,10 @@ async function checkNewDay(playedOverride){if(!live())return;const t=today();let
  if(seen===t)return;const v=sv();const played=playedOverride!==undefined?playedOverride:(D&&D.day.date===t&&D.day.status==='won')||!!(v&&v.today_seconds!=null);
  const ever=statsView().total>0;try{localStorage.setItem(NK(),t)}catch(e){}
  if(!played&&ever&&window.__notify)window.__notify('오늘의 미니게임이 열렸어요. 가장 빠른 창업가에 도전해 보세요')}
-const tickHome=()=>{if(document.hidden||$('mypage').hidden)return;init();fetchStats().then(()=>{syncFromServer();applyGame();checkNewDay();checkOvertake();checkInbox()})};
+const tickHome=()=>{if(document.hidden||$('mypage').hidden)return;init();fetchStats().then(r=>{if(r)reconcile();syncFromServer();applyGame();checkNewDay();checkOvertake();checkInbox()})};
 setInterval(tickHome,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)tickHome()});
-function paintGame(){init();syncFromServer();applyGame();fetchStats().then(r=>{if(r){syncFromServer();applyGame();checkNewDay();checkOvertake();checkInbox()}})}
+function paintGame(){init();syncFromServer();applyGame();fetchStats().then(r=>{if(r){reconcile();syncFromServer();applyGame();checkNewDay();checkOvertake();checkInbox()}})}
 function hearts(){$('sd-hearts').style.display=HEARTS_ON?'':'none';if(!HEARTS_ON)return;$('sd-hearts').innerHTML=Array.from({length:HEARTS},(_,i)=>'<svg viewBox="0 0 24 24" class="'+(i<D.day.hearts?'on':'')+'" aria-hidden="true"><path d="M12 20.5s-8-4.9-8-10.6A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 8 2.5c0 5.7-8 10.6-8 10.6z"/></svg>').join('');$('sd-hearts').setAttribute('aria-label','남은 하트 '+D.day.hearts+'개')}
 function render(){const g=$('sd-grid');const peers=i=>{if(sel<0)return false;const r=Math.floor(i/N),c=i%N,sr=Math.floor(sel/N),sc=sel%N;return r===sr||c===sc||(Math.floor(r/BH)===Math.floor(sr/BH)&&Math.floor(c/BW)===Math.floor(sc/BW))};
  const sv=sel>=0?(P[sel]||D.day.vals[sel]):0;
@@ -705,7 +706,7 @@ async function openTaunt(){
 $('sr-taunt').onclick=openTaunt;
 async function checkInbox(){if(!live())return;try{const {data,error}=await window.__sb.rpc('game_taunt_inbox');if(error)throw error;(data||[]).forEach(x=>{window.__notify&&window.__notify((x.name||'친구')+'님이 콕 찔렀어요!'+(x.seconds?' 오늘 기록 '+fmt(x.seconds*1000)+', 도전해 볼래요?':''))})}catch(e){}}
 // 카드를 누르면 바로 시작하지 않고, 안내 시트를 먼저 보여줘요
-async function intro(){init();if(live()){await Promise.race([fetchStats(),new Promise(r=>setTimeout(r,2500))]);syncFromServer()}const resume=D.day.status==='playing'&&progressed();
+async function intro(){init();if(live()){await Promise.race([fetchStats(),new Promise(r=>setTimeout(r,2500))]);reconcile();syncFromServer()}const resume=D.day.status==='playing'&&progressed();
  if(DAILY_LIMIT&&D.day.status!=='playing'){open();return}
  const {box,close}=window.__sheet('오늘의 미니게임','<p class="sheet-sub ev-sub2">아이디어만큼 중요한 건 실행 속도.</p><ol class="ev-steps"><li><b>1</b><span>빈칸에 <em>1~6</em> 숫자를 채우는 스도쿠예요</span></li><li><b>2</b><span>가로줄·세로줄·굵은 선 칸에 같은 숫자는 한 번만</span></li><li><b>3</b><span>다 풀면 오늘의 랭킹에서 내 순위를 확인해요</span></li></ol><button type="button" class="primary sh-save">'+(resume?'이어서 하기':'시작하기')+'</button>');
  const go=box.querySelector('.sh-save');go.disabled=false;go.onclick=()=>{close();setTimeout(open,230)}}
