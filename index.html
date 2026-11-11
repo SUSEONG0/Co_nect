@@ -165,8 +165,12 @@ async function loadState(){if(!sb||!user)return;
   window.__tickets=typeof data.tickets==='number'?data.tickets:null;
   requested.clear();(data.sent||[]).forEach(id=>requested.add(id));
   friends=(data.friends||[]).map(toPerson);setFriends(friends);
-  const fresh=(data.friends||[]).filter(f=>f.is_new);
-  if(fresh.length){if(window.__friendPopup)window.__friendPopup(toPerson(fresh[0]),false);else say(fresh.map(f=>f.name).join(', ')+'님과 친구가 됐어요!',3200);fresh.forEach(f=>window.__notify&&window.__notify(f.name+'님과 친구가 됐어요'));sb.rpc('mark_friends_seen')}
+  const told=window.__toldFriends||(window.__toldFriends=new Set());
+  const fresh=(data.friends||[]).filter(f=>f.is_new&&!told.has(f.id));
+  if(fresh.length){fresh.forEach(f=>told.add(f.id));                         // never announce the same friend twice in one session
+   sb.rpc('mark_friends_seen').then(()=>{},()=>{});                          // a supabase-js call only runs when awaited / .then()-ed
+   if(window.__friendPopup)window.__friendPopup(toPerson(fresh[0]),false);else say(fresh.map(f=>f.name).join(', ')+'님과 친구가 됐어요!',3200);
+   fresh.forEach(f=>window.__notify&&window.__notify(f.name+'님과 친구가 됐어요'))}
   renderExplore()}catch(e){window.__tickets=null}}
 window.__toPerson=toPerson;
 window.__live=()=>!!(sb&&user);
